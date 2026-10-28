@@ -10,7 +10,7 @@ import (
 	"url_shorter/internal/httpjson"
 	"url_shorter/internal/service"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
@@ -69,10 +69,7 @@ func (h *Handler) HandleCreateCode(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf)
 }
 
-func (h *Handler) Routes() http.Handler {
-	r := chi.NewRouter()
-
+func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post("/url-shorten", h.HandleCreateCode)
 	// r.Get("/{code}", h.Redirect)
-	return r
 }

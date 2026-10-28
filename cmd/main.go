@@ -30,8 +30,7 @@ func main() {
 	repo := repository.NewLinkRepository(pool)
 	serv := service.NewLinkService(repo)
 	server := httpserver.NewHttpServer(conf.Server)
-	handler := handler.NewHandler(serv)
-	server.Mux().Mount("/", handler.Routes())
+	handler.NewHandler(serv).RegisterRoutes(server.Mux())
 
 	if err := server.Start(); err != nil {
 		slog.Error("error starting http server", slog.Any("error", err))

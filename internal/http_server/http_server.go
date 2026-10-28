@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"url_shorter/config"
+	"url_shorter/internal/httpjson"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -44,14 +45,6 @@ func NewHttpServer(conf config.Server) ServerInterface {
 	r.Use(middleware.ClientIPFromHeader("X-Real-IP"))
 	r.Use(middleware.Recoverer)
 
-	// r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-	// 	response.RenderNotFound(w)
-	// })
-	//
-	// r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-	// 	response.RenderMethodNotAllowed(w)
-	// })
-
 	// The browser session is cookie based, so the cors handler has to allow
 	// credentials. Browsers reject "*" together with credentials, therefore the
 	// allowed origins have to be listed explicitly.
@@ -76,6 +69,14 @@ func NewHttpServer(conf config.Server) ServerInterface {
 		srv:    srv,
 		router: r,
 	}
+
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		httpjson.WriteNotFound(w)
+	})
+
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		httpjson.WriteNotMethodNotAllowed(w)
+	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
