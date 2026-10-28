@@ -10,6 +10,7 @@ import (
 	"url_shorter/internal/handler"
 	httpserver "url_shorter/internal/http_server"
 	"url_shorter/internal/repository"
+	"url_shorter/internal/service"
 )
 
 func main() {
@@ -26,9 +27,10 @@ func main() {
 		log.Error("error with db", slog.Any("error", err))
 		os.Exit(1)
 	}
-	repo := repository.NewUrlCodeRepository(pool)
+	repo := repository.NewLinkRepository(pool)
+	serv := service.NewLinkService(repo)
 	server := httpserver.NewHttpServer(conf.Server)
-	handler := handler.NewHandler(repo)
+	handler := handler.NewHandler(serv)
 	server.Mux().Mount("/", handler.Routes())
 
 	if err := server.Start(); err != nil {

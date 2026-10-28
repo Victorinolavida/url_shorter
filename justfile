@@ -6,6 +6,9 @@ pg_container := "url-shorten-postgres"
 # Schema file consumed by sqlc, regenerated from the migrated database.
 schema_file := "db/schema.sql"
 
+# sqlc configuration file.
+sqlc_config := "db/sqlc.yaml"
+
 
 run:
     @go run ./cmd/
@@ -18,6 +21,10 @@ migrate: db-create
 schema: migrate
     docker exec {{pg_container}} pg_dump --schema-only --no-owner --no-privileges \
         --exclude-table=schema_migrations "{{db_url}}" | grep -v '^\\' > "{{schema_file}}"
+
+# Generate sqlc code from queries and schema.
+generate: schema
+    sqlc generate --file "{{sqlc_config}}"
 
 # Roll back the last migration batch.
 down: db-create

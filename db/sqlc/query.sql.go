@@ -11,61 +11,96 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getByCode = `-- name: GetByCode :one
-SELECT id, code, url, created_at from url_code 
+const getActiveLinkByHash = `-- name: GetActiveLinkByHash :one
+SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
+WHERE url_hash = $1 and status = 'active'
+`
+
+func (q *Queries) GetActiveLinkByHash(ctx context.Context, urlHash []byte) (Link, error) {
+	row := q.db.QueryRow(ctx, getActiveLinkByHash, urlHash)
+	var i Link
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.RawUrl,
+		&i.CreatedAt,
+		&i.UrlHash,
+		&i.ExpiresAt,
+		&i.Status,
+	)
+	return i, err
+}
+
+const getLinkByCode = `-- name: GetLinkByCode :one
+SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
 WHERE code = $1
 `
 
-func (q *Queries) GetByCode(ctx context.Context, code string) (UrlCode, error) {
-	row := q.db.QueryRow(ctx, getByCode, code)
-	var i UrlCode
+func (q *Queries) GetLinkByCode(ctx context.Context, code string) (Link, error) {
+	row := q.db.QueryRow(ctx, getLinkByCode, code)
+	var i Link
 	err := row.Scan(
 		&i.ID,
 		&i.Code,
-		&i.Url,
+		&i.RawUrl,
 		&i.CreatedAt,
+		&i.UrlHash,
+		&i.ExpiresAt,
+		&i.Status,
 	)
 	return i, err
 }
 
-const getByURL = `-- name: GetByURL :one
-SELECT id, code, url, created_at from url_code 
-WHERE url = $1
+const getLinkByHash = `-- name: GetLinkByHash :one
+SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
+WHERE url_hash = $1
 `
 
-func (q *Queries) GetByURL(ctx context.Context, url string) (UrlCode, error) {
-	row := q.db.QueryRow(ctx, getByURL, url)
-	var i UrlCode
+func (q *Queries) GetLinkByHash(ctx context.Context, urlHash []byte) (Link, error) {
+	row := q.db.QueryRow(ctx, getLinkByHash, urlHash)
+	var i Link
 	err := row.Scan(
 		&i.ID,
 		&i.Code,
-		&i.Url,
+		&i.RawUrl,
 		&i.CreatedAt,
+		&i.UrlHash,
+		&i.ExpiresAt,
+		&i.Status,
 	)
 	return i, err
 }
 
-const saveUrlCode = `-- name: SaveUrlCode :one
-INSERT INTO url_code(
+const saveLink = `-- name: SaveLink :one
+INSERT INTO links(
     code,
-    url
-) VALUES ($1,$2)
+    raw_url,
+    url_hash,
+    expires_at
+) VALUES ($1,$2,$3,$4)
 RETURNING  id, created_at
 `
 
-type SaveUrlCodeParams struct {
-	Code string
-	Url  string
+type SaveLinkParams struct {
+	Code      string
+	RawUrl    string
+	UrlHash   []byte
+	ExpiresAt pgtype.Timestamptz
 }
 
-type SaveUrlCodeRow struct {
+type SaveLinkRow struct {
 	ID        int64
 	CreatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) SaveUrlCode(ctx context.Context, arg SaveUrlCodeParams) (SaveUrlCodeRow, error) {
-	row := q.db.QueryRow(ctx, saveUrlCode, arg.Code, arg.Url)
-	var i SaveUrlCodeRow
+func (q *Queries) SaveLink(ctx context.Context, arg SaveLinkParams) (SaveLinkRow, error) {
+	row := q.db.QueryRow(ctx, saveLink,
+		arg.Code,
+		arg.RawUrl,
+		arg.UrlHash,
+		arg.ExpiresAt,
+	)
+	var i SaveLinkRow
 	err := row.Scan(&i.ID, &i.CreatedAt)
 	return i, err
 }

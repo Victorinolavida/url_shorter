@@ -8,9 +8,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type UrlCode struct {
+type Link struct {
 	ID        int64
 	Code      string
-	Url       string
+	RawUrl    string
 	CreatedAt pgtype.Timestamptz
+	UrlHash   []byte
+	ExpiresAt pgtype.Timestamptz
+	Status    string
 }

@@ -23,57 +23,65 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: url_code; Type: TABLE; Schema: public; Owner: -
+-- Name: links; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.url_code (
+CREATE TABLE public.links (
     id bigint NOT NULL,
     code text NOT NULL,
-    url text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    raw_url text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    url_hash bytea NOT NULL,
+    expires_at timestamp with time zone,
+    status text DEFAULT 'active'::text NOT NULL,
+    CONSTRAINT chck_code_length CHECK (((char_length(code) >= 4) AND (char_length(code) <= 32))),
+    CONSTRAINT chck_raw_url_length CHECK ((length(raw_url) <= 2048)),
+    CONSTRAINT chck_status CHECK ((status = ANY (ARRAY['active'::text, 'expired'::text, 'disabled'::text, 'blocked'::text])))
 );
 
 
 --
--- Name: url_code_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: links_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.url_code_id_seq
+ALTER TABLE public.links ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.links_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
-    CACHE 1;
+    CACHE 1
+);
 
 
 --
--- Name: url_code_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: links unique_link_code; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.url_code_id_seq OWNED BY public.url_code.id;
-
-
---
--- Name: url_code id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.url_code ALTER COLUMN id SET DEFAULT nextval('public.url_code_id_seq'::regclass);
+ALTER TABLE ONLY public.links
+    ADD CONSTRAINT unique_link_code UNIQUE (code);
 
 
 --
--- Name: url_code url_code_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: links url_code_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.url_code
-    ADD CONSTRAINT url_code_code_key UNIQUE (code);
-
-
---
--- Name: url_code url_code_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.url_code
+ALTER TABLE ONLY public.links
     ADD CONSTRAINT url_code_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_link_expired_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_link_expired_at ON public.links USING btree (expires_at) WHERE (expires_at IS NOT NULL);
+
+
+--
+-- Name: idx_url_hash_expired_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_url_hash_expired_at ON public.links USING btree (url_hash);
 
 
 --
