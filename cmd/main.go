@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
 	"url_shorter/config"
-	"url_shorter/internal/adapters/in/http"
-	httpPkg "url_shorter/internal/pkg/http"
+	"url_shorter/db/pool"
+	"url_shorter/internal/handler"
+	httpserver "url_shorter/internal/http_server"
+	"url_shorter/internal/repository"
 )
 
 func main() {
@@ -18,9 +21,14 @@ func main() {
 		log.Error("error loading config", slog.Any("error", err))
 		os.Exit(1)
 	}
-	server := httpPkg.NewServer(conf.Server)
-	handler := http.NewHandler()
-
+	pool, err := pool.NewPool(context.TODO(), conf.Database)
+	if err != nil {
+		log.Error("error with db", slog.Any("error", err))
+		os.Exit(1)
+	}
+	repo := repository.NewUrlCodeRepository(pool)
+	server := httpserver.NewHttpServer(conf.Server)
+	handler := handler.NewHandler(repo)
 	server.Mux().Mount("/", handler.Routes())
 
 	if err := server.Start(); err != nil {

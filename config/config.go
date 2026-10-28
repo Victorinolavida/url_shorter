@@ -57,6 +57,17 @@ type Server struct {
 }
 
 type Config struct {
-	Env    string `koanf:"env"`
-	Server Server `koanf:"server"`
+	Env      string   `koanf:"env"`
+	Server   Server   `koanf:"server"`
+	Database Database `koanf:"database"`
+}
+
+type Database struct {
+	User     string `koanf:"user"`
+	Password string `koanf:"password"`
+	Host     string `koanf:"host"`
+	Port     int    `koanf:"port"`
+	Name     string `koanf:"name"`
+	MaxConns int    `koanf:"max_conns"`
+	MinConns int    `koanf:"min_conns"`
 }
