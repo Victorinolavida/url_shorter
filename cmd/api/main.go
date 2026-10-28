@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
-	"os"
 
 	"url_shorter/config"
 	"url_shorter/db/pool"
@@ -11,29 +11,26 @@ import (
 	httpserver "url_shorter/internal/http_server"
 	"url_shorter/internal/repository"
 	"url_shorter/internal/service"
+	"url_shorter/utils/logger"
 )
 
 func main() {
-	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	slog.SetDefault(log)
-
 	conf, err := config.NewConfig[config.Config]()
 	if err != nil {
-		log.Error("error loading config", slog.Any("error", err))
-		os.Exit(1)
+		panic(fmt.Sprintf("error loading config %v\n", err))
 	}
+
+	logger.NewLogger(conf, "api")
 	pool, err := pool.NewPool(context.TODO(), conf.Database)
 	if err != nil {
-		log.Error("error with db", slog.Any("error", err))
-		os.Exit(1)
+		logger.Fatal("error with db", slog.Any("error", err))
 	}
 	repo := repository.NewLinkRepository(pool)
 	serv := service.NewLinkService(repo)
 	server := httpserver.NewHttpServer(conf.Server)
-	handler.NewHandler(serv).RegisterRoutes(server.Mux())
+	handler.NewHandler(&conf.Server, serv).RegisterRoutes(server.Mux())
 
 	if err := server.Start(); err != nil {
-		slog.Error("error starting http server", slog.Any("error", err))
-		os.Exit(1)
+		logger.Fatal("error starting http server", slog.Any("error", err))
 	}
 }
