@@ -11,6 +11,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const expireLinks = `-- name: ExpireLinks :execrows
+UPDATE links
+SET status = 'expired'
+WHERE status = 'active'
+  AND expires_at IS NOT NULL
+  AND expires_at < now()
+`
+
+func (q *Queries) ExpireLinks(ctx context.Context) (int64, error) {
+	result, err := q.db.Exec(ctx, expireLinks)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getActiveLinkByHash = `-- name: GetActiveLinkByHash :one
 SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
 WHERE url_hash = $1 and status = 'active'

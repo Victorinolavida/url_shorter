@@ -114,3 +114,8 @@ func (repo *LinkRepo) GetActiveByHash(ctx context.Context, hash []byte) (*entity
 		ExpiresAt: expiresAt,
 	}, nil
 }
+
+func (repo *LinkRepo) ExpireLinks(ctx context.Context) (int, error) {
+	result, err := repo.queries.ExpireLinks(ctx)
+	return int(result), err
+}

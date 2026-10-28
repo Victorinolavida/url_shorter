@@ -11,7 +11,10 @@ sqlc_config := "db/sqlc.yaml"
 
 
 run:
-    @go run ./cmd/
+    @go run ./cmd/api/...
+
+run-worker:
+    @go run ./cmd/worker/...
 
 # Apply all pending DB migrations.
 migrate: db-create

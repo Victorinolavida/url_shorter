@@ -3,7 +3,9 @@ package handler
 import (
 	"log"
 	"net/http"
+	"strings"
 
+	"url_shorter/config"
 	"url_shorter/internal/entity"
 	"url_shorter/internal/httpjson"
 	"url_shorter/internal/service"
@@ -13,10 +15,11 @@ import (
 
 type Handler struct {
 	service service.LinkService
+	domain  string
 }
 
-func NewHandler(service service.LinkService) *Handler {
-	return &Handler{service}
+func NewHandler(conf *config.Server, service service.LinkService) *Handler {
+	return &Handler{service: service, domain: conf.PublicDomain}
 }
 
 func (h *Handler) HandleCreateCode(w http.ResponseWriter, r *http.Request) {
@@ -44,10 +47,18 @@ func (h *Handler) HandleCreateCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := CreateResponse{
-		URL:       "http://localhost:5100/" + result.Code,
+		URL:       h.publicURL(result.Code),
 		ExpiresAt: result.ExpiresAt,
 	}
 	httpjson.WriteJsonResponse(w, response, http.StatusOK)
+}
+
+func (h *Handler) publicURL(code string) string {
+	domain := strings.TrimRight(h.domain, "/")
+	if !strings.Contains(domain, "://") {
+		domain = "https://" + domain
+	}
+	return domain + "/" + code
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {

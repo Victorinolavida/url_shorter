@@ -41,3 +41,14 @@ func (s *LinkServ) CreateOrGetLinkCode(ctx context.Context, link *entity.Link) (
 	slog.Info("create new link")
 	return link, nil
 }
+
+func (s *LinkServ) ExpireActiveLinks(ctx context.Context) error {
+	count, err := s.repo.ExpireLinks(ctx)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		slog.Info("expired links", slog.Int("count", count))
+	}
+	return nil
+}
