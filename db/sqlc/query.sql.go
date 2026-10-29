@@ -27,9 +27,24 @@ func (q *Queries) ExpireLinks(ctx context.Context) (int64, error) {
 	return result.RowsAffected(), nil
 }
 
+const expireStaleLinksByHash = `-- name: ExpireStaleLinksByHash :exec
+UPDATE links
+SET status = 'expired'
+WHERE url_hash = $1
+  AND status = 'active'
+  AND expires_at IS NOT NULL
+  AND expires_at <= now()
+`
+
+func (q *Queries) ExpireStaleLinksByHash(ctx context.Context, urlHash []byte) error {
+	_, err := q.db.Exec(ctx, expireStaleLinksByHash, urlHash)
+	return err
+}
+
 const getActiveLinkByHash = `-- name: GetActiveLinkByHash :one
 SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
 WHERE url_hash = $1 and status = 'active'
+  AND (expires_at IS NULL OR expires_at > now())
 `
 
 func (q *Queries) GetActiveLinkByHash(ctx context.Context, urlHash []byte) (Link, error) {
@@ -94,7 +109,9 @@ INSERT INTO links(
     url_hash,
     expires_at
 ) VALUES ($1,$2,$3,$4)
-RETURNING  id, created_at
+ON CONFLICT (url_hash) WHERE status = 'active'
+DO UPDATE SET url_hash = EXCLUDED.url_hash
+RETURNING id, code, raw_url, created_at, url_hash, expires_at, status
 `
 
 type SaveLinkParams struct {
@@ -104,19 +121,22 @@ type SaveLinkParams struct {
 	ExpiresAt pgtype.Timestamptz
 }
 
-type SaveLinkRow struct {
-	ID        int64
-	CreatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) SaveLink(ctx context.Context, arg SaveLinkParams) (SaveLinkRow, error) {
+func (q *Queries) SaveLink(ctx context.Context, arg SaveLinkParams) (Link, error) {
 	row := q.db.QueryRow(ctx, saveLink,
 		arg.Code,
 		arg.RawUrl,
 		arg.UrlHash,
 		arg.ExpiresAt,
 	)
-	var i SaveLinkRow
-	err := row.Scan(&i.ID, &i.CreatedAt)
+	var i Link
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.RawUrl,
+		&i.CreatedAt,
+		&i.UrlHash,
+		&i.ExpiresAt,
+		&i.Status,
+	)
 	return i, err
 }

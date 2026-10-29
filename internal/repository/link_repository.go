@@ -15,16 +15,18 @@ import (
 )
 
 type LinkRepo struct {
+	pool    *pgxpool.Pool
 	queries *sqlc.Queries
 }
 
 func NewLinkRepository(pool *pgxpool.Pool) LinkRepository {
 	return &LinkRepo{
+		pool:    pool,
 		queries: sqlc.New(pool),
 	}
 }
 
-func (repo *LinkRepo) Save(ctx context.Context, link *entity.Link) error {
+func (repo *LinkRepo) Save(ctx context.Context, link *entity.Link) (*entity.Link, error) {
 	params := sqlc.SaveLinkParams{
 		Code:    link.Code,
 		RawUrl:  link.RawUrl,
@@ -33,14 +35,27 @@ func (repo *LinkRepo) Save(ctx context.Context, link *entity.Link) error {
 	if link.ExpiresAt != nil {
 		params.ExpiresAt = pgtype.Timestamptz{Time: link.ExpiresAt.UTC(), Valid: true}
 	}
-	result, err := repo.queries.SaveLink(ctx, params)
+
+	tx, err := repo.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	queries := sqlc.New(tx)
+	if err := queries.ExpireStaleLinksByHash(ctx, link.HashUrl); err != nil {
+		return nil, err
 	}
 
-	link.ID = int(result.ID)
-	link.CreatedAt = result.CreatedAt.Time
-	return nil
+	result, err := queries.SaveLink(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	return linkFromRow(result), nil
 }
 
 func (repo *LinkRepo) GetByCode(ctx context.Context, code string) (*entity.Link, error) {
@@ -51,20 +66,7 @@ func (repo *LinkRepo) GetByCode(ctx context.Context, code string) (*entity.Link,
 		}
 		return nil, err
 	}
-	var expiresAt *time.Time
-	if result.ExpiresAt.Valid {
-		t := result.ExpiresAt.Time
-		expiresAt = &t
-	}
-	return &entity.Link{
-		ID:        int(result.ID),
-		Code:      result.Code,
-		Status:    entity.LinkStatus(result.Status),
-		RawUrl:    result.RawUrl,
-		HashUrl:   result.UrlHash,
-		CreatedAt: result.CreatedAt.Time,
-		ExpiresAt: expiresAt,
-	}, nil
+	return linkFromRow(result), nil
 }
 
 func (repo *LinkRepo) GetByHash(ctx context.Context, hash []byte) (*entity.Link, error) {
@@ -75,20 +77,7 @@ func (repo *LinkRepo) GetByHash(ctx context.Context, hash []byte) (*entity.Link,
 		}
 		return nil, err
 	}
-	var expiresAt *time.Time
-	if result.ExpiresAt.Valid {
-		t := result.ExpiresAt.Time
-		expiresAt = &t
-	}
-	return &entity.Link{
-		ID:        int(result.ID),
-		Code:      result.Code,
-		Status:    entity.LinkStatus(result.Status),
-		RawUrl:    result.RawUrl,
-		HashUrl:   result.UrlHash,
-		CreatedAt: result.CreatedAt.Time,
-		ExpiresAt: expiresAt,
-	}, nil
+	return linkFromRow(result), nil
 }
 
 func (repo *LinkRepo) GetActiveByHash(ctx context.Context, hash []byte) (*entity.Link, error) {
@@ -99,6 +88,10 @@ func (repo *LinkRepo) GetActiveByHash(ctx context.Context, hash []byte) (*entity
 		}
 		return nil, err
 	}
+	return linkFromRow(result), nil
+}
+
+func linkFromRow(result sqlc.Link) *entity.Link {
 	var expiresAt *time.Time
 	if result.ExpiresAt.Valid {
 		t := result.ExpiresAt.Time
@@ -112,7 +105,7 @@ func (repo *LinkRepo) GetActiveByHash(ctx context.Context, hash []byte) (*entity
 		HashUrl:   result.UrlHash,
 		CreatedAt: result.CreatedAt.Time,
 		ExpiresAt: expiresAt,
-	}, nil
+	}
 }
 
 func (repo *LinkRepo) ExpireLinks(ctx context.Context) (int, error) {

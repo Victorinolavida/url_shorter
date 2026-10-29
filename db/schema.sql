@@ -85,6 +85,13 @@ CREATE INDEX idx_url_hash_expired_at ON public.links USING btree (url_hash);
 
 
 --
+-- Name: unique_active_url_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX unique_active_url_hash ON public.links USING btree (url_hash) WHERE (status = 'active'::text);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
