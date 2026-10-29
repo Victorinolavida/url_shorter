@@ -36,3 +36,7 @@ func (s *LinkServ) ExpireActiveLinks(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (s *LinkServ) GetActiveLinkByCode(ctx context.Context, code string) (*entity.Link, error) {
+	return s.repo.GetActiveByCode(ctx, code)
+}

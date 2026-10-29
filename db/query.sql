@@ -40,3 +40,8 @@ SET status = 'expired'
 WHERE status = 'active'
   AND expires_at IS NOT NULL
   AND expires_at < now();
+
+-- name: GetActiveLinkByCode :one
+SELECT * from links 
+WHERE code = $1 and status = 'active'
+  AND (expires_at IS NULL OR expires_at > now());

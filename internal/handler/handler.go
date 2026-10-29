@@ -1,12 +1,15 @@
 package handler
 
 import (
+	"errors"
 	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"url_shorter/config"
 	"url_shorter/internal/entity"
+	apperrors "url_shorter/internal/errors"
 	"url_shorter/internal/httpjson"
 	"url_shorter/internal/service"
 
@@ -53,6 +56,31 @@ func (h *Handler) HandleCreateCode(w http.ResponseWriter, r *http.Request) {
 	httpjson.WriteJsonResponse(w, response, http.StatusOK)
 }
 
+func (h *Handler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
+	code := chi.URLParam(r, "code")
+	if code == "" {
+		httpjson.WriteErrMsg(w, http.StatusBadRequest, "invalid url")
+		return
+	}
+
+	link, err := h.service.GetActiveLinkByCode(r.Context(), code)
+	if err != nil {
+		switch {
+		case errors.Is(err, apperrors.ErrLinkNotFound),
+			errors.Is(err, apperrors.ErrLinkExpired),
+			errors.Is(err, apperrors.ErrLinkDisabled),
+			errors.Is(err, apperrors.ErrLinkBlocked):
+			slog.Info("link unavailable", slog.Any("reason", err))
+			httpjson.WriteErrMsg(w, http.StatusNotFound, "link not found or expired")
+		default:
+			slog.Error("error getting active link", slog.Any("error", err))
+			httpjson.WriteErrMsg(w, http.StatusInternalServerError, "something went wrong")
+		}
+		return
+	}
+	http.Redirect(w, r, link.RawUrl, http.StatusSeeOther)
+}
+
 func (h *Handler) publicURL(code string) string {
 	domain := strings.TrimRight(h.domain, "/")
 	if !strings.Contains(domain, "://") {
@@ -63,5 +91,5 @@ func (h *Handler) publicURL(code string) string {
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post("/url-shorten", h.HandleCreateCode)
-	// r.Get("/{code}", h.Redirect)
+	r.Get("/{code}", h.HandleRedirect)
 }

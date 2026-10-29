@@ -91,6 +91,33 @@ func (repo *LinkRepo) GetActiveByHash(ctx context.Context, hash []byte) (*entity
 	return linkFromRow(result), nil
 }
 
+func (repo *LinkRepo) GetActiveByCode(ctx context.Context, code string) (*entity.Link, error) {
+	result, err := repo.queries.GetLinkByCode(ctx, code)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperrors.ErrLinkNotFound
+		}
+		return nil, err
+	}
+
+	link := linkFromRow(result)
+	switch link.Status {
+	case entity.ActiveStatus:
+		if link.IsExpired() {
+			return nil, apperrors.ErrLinkExpired
+		}
+		return link, nil
+	case entity.ExpiredStatus:
+		return nil, apperrors.ErrLinkExpired
+	case entity.DisabledStatus:
+		return nil, apperrors.ErrLinkDisabled
+	case entity.BlockedStatus:
+		return nil, apperrors.ErrLinkBlocked
+	default:
+		return nil, apperrors.ErrLinkNotFound
+	}
+}
+
 func linkFromRow(result sqlc.Link) *entity.Link {
 	var expiresAt *time.Time
 	if result.ExpiresAt.Valid {

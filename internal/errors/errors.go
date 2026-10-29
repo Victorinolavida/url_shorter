@@ -4,6 +4,9 @@ import "errors"
 
 var (
 	ErrLinkNotFound      = errors.New("link not found")
+	ErrLinkExpired       = errors.New("link expired")
+	ErrLinkDisabled      = errors.New("link disabled")
+	ErrLinkBlocked       = errors.New("link blocked")
 	ErrInvalidURLSchema  = errors.New("invalid schema for url")
 	ErrInvalidHostname   = errors.New("invalid hostname")
 	ErrInvalidPort       = errors.New("invalid port")

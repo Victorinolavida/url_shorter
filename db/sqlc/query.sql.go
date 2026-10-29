@@ -41,6 +41,27 @@ func (q *Queries) ExpireStaleLinksByHash(ctx context.Context, urlHash []byte) er
 	return err
 }
 
+const getActiveLinkByCode = `-- name: GetActiveLinkByCode :one
+SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
+WHERE code = $1 and status = 'active'
+  AND (expires_at IS NULL OR expires_at > now())
+`
+
+func (q *Queries) GetActiveLinkByCode(ctx context.Context, code string) (Link, error) {
+	row := q.db.QueryRow(ctx, getActiveLinkByCode, code)
+	var i Link
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.RawUrl,
+		&i.CreatedAt,
+		&i.UrlHash,
+		&i.ExpiresAt,
+		&i.Status,
+	)
+	return i, err
+}
+
 const getActiveLinkByHash = `-- name: GetActiveLinkByHash :one
 SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
 WHERE url_hash = $1 and status = 'active'
