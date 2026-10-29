@@ -16,16 +16,13 @@ type Link struct {
 	HashUrl   []byte
 }
 
-// IsActive return true if the status is active and the expiration is less than time.Now
-// is the expiration is null, is enough that the status is active
+// IsActive return true if the status is active
 func (l *Link) IsActive() bool {
-	if l.Status != ActiveStatus {
-		return false
-	}
-	if l.ExpiresAt != nil && l.ExpiresAt.Before(time.Now()) {
-		return false
-	}
-	return true
+	return l.Status == ActiveStatus
+}
+
+func (l *Link) IsExpired() bool {
+	return l.ExpiresAt != nil && l.ExpiresAt.Before(time.Now())
 }
 
 func NewLink(raw string, expired *time.Time) (*Link, error) {
