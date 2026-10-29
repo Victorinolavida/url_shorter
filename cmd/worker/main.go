@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"url_shorter/cache/redis"
 	"url_shorter/config"
 	"url_shorter/db/pool"
 	"url_shorter/internal/repository"
@@ -33,7 +34,13 @@ func main() {
 		logger.Fatal("error with db", slog.Any("error", err))
 	}
 	repo := repository.NewLinkRepository(pool)
-	serv := service.NewLinkService(repo)
+
+	cache, err := redis.NewRedisClient(conf.Redis)
+	if err != nil {
+		logger.Fatal("error with redis", slog.Any("error", err))
+	}
+
+	serv := service.NewLinkService(repo, cache)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -49,16 +56,13 @@ func main() {
 }
 
 func runWorker(ctx context.Context, duration time.Duration, service service.LinkService) {
-	interval, err := time.ParseDuration(duration.String())
-	if err != nil {
-		slog.Error("error parsing duration", slog.Any("error", err))
-	}
+	interval := duration
 	if interval <= 0 {
 		slog.Warn("duration is less than 0, using the default instead")
-		duration = defaultIntervalDuration
+		interval = defaultIntervalDuration
 	}
 
-	tick := time.NewTicker(duration)
+	tick := time.NewTicker(interval)
 	defer tick.Stop()
 
 	for {

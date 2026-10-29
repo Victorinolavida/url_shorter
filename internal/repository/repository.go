@@ -12,5 +12,5 @@ type LinkRepository interface {
 	GetByHash(context.Context, []byte) (*entity.Link, error)
 	GetActiveByHash(context.Context, []byte) (*entity.Link, error)
 	GetActiveByCode(context.Context, string) (*entity.Link, error)
-	ExpireLinks(context.Context) (int, error)
+	ExpireLinks(context.Context) ([]string, error)
 }

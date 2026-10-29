@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"url_shorter/cache/redis"
 	"url_shorter/config"
 	"url_shorter/db/pool"
 	"url_shorter/internal/handler"
@@ -26,7 +27,13 @@ func main() {
 		logger.Fatal("error with db", slog.Any("error", err))
 	}
 	repo := repository.NewLinkRepository(pool)
-	serv := service.NewLinkService(repo)
+
+	cache, err := redis.NewRedisClient(conf.Redis)
+	if err != nil {
+		logger.Fatal("error with redis", slog.Any("error", err))
+	}
+
+	serv := service.NewLinkService(repo, cache)
 	server := httpserver.NewHttpServer(conf.Server)
 	handler.NewHandler(&conf.Server, serv).RegisterRoutes(server.Mux())
 

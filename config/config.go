@@ -82,6 +82,7 @@ type Config struct {
 	Database       Database      `koanf:"database"`
 	LogLevel       string        `koanf:"log_level"`
 	WorkerInterval time.Duration `koanf:"worker_duration"`
+	Redis          Redis         `koanf:"redis"`
 }
 
 func (c *Config) Validate() error {
@@ -142,4 +143,9 @@ type Database struct {
 	Name     string `koanf:"name"`
 	MaxConns int    `koanf:"max_conns"`
 	MinConns int    `koanf:"min_conns"`
+}
+
+type Redis struct {
+	Host string `koanf:"host"`
+	Port string `koanf:"port"`
 }

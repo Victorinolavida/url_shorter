@@ -34,12 +34,13 @@ WHERE url_hash = $1
   AND expires_at IS NOT NULL
   AND expires_at <= now();
 
--- name: ExpireLinks :execrows
+-- name: ExpireLinks :many
 UPDATE links
 SET status = 'expired'
 WHERE status = 'active'
   AND expires_at IS NOT NULL
-  AND expires_at < now();
+  AND expires_at < now()
+RETURNING code;
 
 -- name: GetActiveLinkByCode :one
 SELECT * from links 
