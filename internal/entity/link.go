@@ -25,6 +25,24 @@ func (l *Link) IsExpired() bool {
 	return l.ExpiresAt != nil && l.ExpiresAt.Before(time.Now())
 }
 
+func (l *Link) ValidateActive() error {
+	switch l.Status {
+	case ActiveStatus:
+		if l.IsExpired() {
+			return apperrors.ErrLinkExpired
+		}
+		return nil
+	case ExpiredStatus:
+		return apperrors.ErrLinkExpired
+	case DisabledStatus:
+		return apperrors.ErrLinkDisabled
+	case BlockedStatus:
+		return apperrors.ErrLinkBlocked
+	default:
+		return apperrors.ErrLinkNotFound
+	}
+}
+
 func NewLink(raw string, expired *time.Time) (*Link, error) {
 	url, err := NewURL(raw)
 	if err != nil {

@@ -101,21 +101,10 @@ func (repo *LinkRepo) GetActiveByCode(ctx context.Context, code string) (*entity
 	}
 
 	link := linkFromRow(result)
-	switch link.Status {
-	case entity.ActiveStatus:
-		if link.IsExpired() {
-			return nil, apperrors.ErrLinkExpired
-		}
-		return link, nil
-	case entity.ExpiredStatus:
-		return nil, apperrors.ErrLinkExpired
-	case entity.DisabledStatus:
-		return nil, apperrors.ErrLinkDisabled
-	case entity.BlockedStatus:
-		return nil, apperrors.ErrLinkBlocked
-	default:
-		return nil, apperrors.ErrLinkNotFound
+	if err := link.ValidateActive(); err != nil {
+		return nil, err
 	}
+	return link, nil
 }
 
 func linkFromRow(result sqlc.Link) *entity.Link {
@@ -135,7 +124,6 @@ func linkFromRow(result sqlc.Link) *entity.Link {
 	}
 }
 
-func (repo *LinkRepo) ExpireLinks(ctx context.Context) (int, error) {
-	result, err := repo.queries.ExpireLinks(ctx)
-	return int(result), err
+func (repo *LinkRepo) ExpireLinks(ctx context.Context) ([]string, error) {
+	return repo.queries.ExpireLinks(ctx)
 }
