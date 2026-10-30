@@ -8,7 +8,7 @@ INSERT INTO links(
 ) VALUES ($1,$2,$3,$4)
 ON CONFLICT (url_hash) WHERE status = 'active'
 DO UPDATE SET url_hash = EXCLUDED.url_hash
-RETURNING id, code, raw_url, created_at, url_hash, expires_at, status;
+RETURNING *;
 
 
 -- name: GetLinkByCode :one
@@ -28,7 +28,8 @@ WHERE url_hash = $1 and status = 'active'
 
 -- name: ExpireStaleLinksByHash :exec
 UPDATE links
-SET status = 'expired'
+SET status = 'expired',
+updated_at = now()
 WHERE url_hash = $1
   AND status = 'active'
   AND expires_at IS NOT NULL
@@ -36,7 +37,8 @@ WHERE url_hash = $1
 
 -- name: ExpireLinks :many
 UPDATE links
-SET status = 'expired'
+SET status = 'expired',
+updated_at = now()
 WHERE status = 'active'
   AND expires_at IS NOT NULL
   AND expires_at < now()

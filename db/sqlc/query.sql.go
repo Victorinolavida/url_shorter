@@ -72,7 +72,8 @@ func (q *Queries) CreateClickEvent(ctx context.Context, arg CreateClickEventPara
 
 const expireLinks = `-- name: ExpireLinks :many
 UPDATE links
-SET status = 'expired'
+SET status = 'expired',
+updated_at = now()
 WHERE status = 'active'
   AND expires_at IS NOT NULL
   AND expires_at < now()
@@ -101,7 +102,8 @@ func (q *Queries) ExpireLinks(ctx context.Context) ([]string, error) {
 
 const expireStaleLinksByHash = `-- name: ExpireStaleLinksByHash :exec
 UPDATE links
-SET status = 'expired'
+SET status = 'expired',
+updated_at = now()
 WHERE url_hash = $1
   AND status = 'active'
   AND expires_at IS NOT NULL
@@ -114,7 +116,7 @@ func (q *Queries) ExpireStaleLinksByHash(ctx context.Context, urlHash []byte) er
 }
 
 const getActiveLinkByCode = `-- name: GetActiveLinkByCode :one
-SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
+SELECT id, code, raw_url, created_at, url_hash, expires_at, status, updated_at from links 
 WHERE code = $1 and status = 'active'
   AND (expires_at IS NULL OR expires_at > now())
 `
@@ -130,12 +132,13 @@ func (q *Queries) GetActiveLinkByCode(ctx context.Context, code string) (Link, e
 		&i.UrlHash,
 		&i.ExpiresAt,
 		&i.Status,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getActiveLinkByHash = `-- name: GetActiveLinkByHash :one
-SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
+SELECT id, code, raw_url, created_at, url_hash, expires_at, status, updated_at from links 
 WHERE url_hash = $1 and status = 'active'
   AND (expires_at IS NULL OR expires_at > now())
 `
@@ -151,12 +154,13 @@ func (q *Queries) GetActiveLinkByHash(ctx context.Context, urlHash []byte) (Link
 		&i.UrlHash,
 		&i.ExpiresAt,
 		&i.Status,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getLinkByCode = `-- name: GetLinkByCode :one
-SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
+SELECT id, code, raw_url, created_at, url_hash, expires_at, status, updated_at from links 
 WHERE code = $1
 `
 
@@ -171,12 +175,13 @@ func (q *Queries) GetLinkByCode(ctx context.Context, code string) (Link, error) 
 		&i.UrlHash,
 		&i.ExpiresAt,
 		&i.Status,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getLinkByHash = `-- name: GetLinkByHash :one
-SELECT id, code, raw_url, created_at, url_hash, expires_at, status from links 
+SELECT id, code, raw_url, created_at, url_hash, expires_at, status, updated_at from links 
 WHERE url_hash = $1
 `
 
@@ -191,6 +196,7 @@ func (q *Queries) GetLinkByHash(ctx context.Context, urlHash []byte) (Link, erro
 		&i.UrlHash,
 		&i.ExpiresAt,
 		&i.Status,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -204,7 +210,7 @@ INSERT INTO links(
 ) VALUES ($1,$2,$3,$4)
 ON CONFLICT (url_hash) WHERE status = 'active'
 DO UPDATE SET url_hash = EXCLUDED.url_hash
-RETURNING id, code, raw_url, created_at, url_hash, expires_at, status
+RETURNING id, code, raw_url, created_at, url_hash, expires_at, status, updated_at
 `
 
 type SaveLinkParams struct {
@@ -230,6 +236,7 @@ func (q *Queries) SaveLink(ctx context.Context, arg SaveLinkParams) (Link, error
 		&i.UrlHash,
 		&i.ExpiresAt,
 		&i.Status,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

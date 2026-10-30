@@ -69,6 +69,7 @@ CREATE TABLE public.links (
     url_hash bytea NOT NULL,
     expires_at timestamp with time zone,
     status text DEFAULT 'active'::text NOT NULL,
+    updated_at timestamp with time zone,
     CONSTRAINT chck_code_length CHECK (((char_length(code) >= 4) AND (char_length(code) <= 32))),
     CONSTRAINT chck_raw_url_length CHECK ((length(raw_url) <= 2048)),
     CONSTRAINT chck_status CHECK ((status = ANY (ARRAY['active'::text, 'expired'::text, 'disabled'::text, 'blocked'::text])))

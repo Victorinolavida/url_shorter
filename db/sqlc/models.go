@@ -30,4 +30,5 @@ type Link struct {
 	UrlHash   []byte
 	ExpiresAt pgtype.Timestamptz
 	Status    string
+	UpdatedAt pgtype.Timestamptz
 }

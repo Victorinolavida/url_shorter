@@ -11,6 +11,7 @@ type Link struct {
 	Code      string
 	Status    LinkStatus
 	ExpiresAt *time.Time
+	UpdatedAt *time.Time
 	CreatedAt time.Time
 	RawUrl    string
 	HashUrl   []byte

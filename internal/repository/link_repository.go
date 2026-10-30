@@ -109,11 +109,16 @@ func (repo *LinkRepo) GetActiveByCode(ctx context.Context, code string) (*entity
 }
 
 func linkFromRow(result sqlc.Link) *entity.Link {
-	var expiresAt *time.Time
+	var expiresAt, updatedAt *time.Time
 	if result.ExpiresAt.Valid {
 		t := result.ExpiresAt.Time
 		expiresAt = &t
 	}
+	if result.UpdatedAt.Valid {
+		t := result.UpdatedAt.Time
+		updatedAt = &t
+	}
+
 	return &entity.Link{
 		ID:        int(result.ID),
 		Code:      result.Code,
@@ -121,6 +126,7 @@ func linkFromRow(result sqlc.Link) *entity.Link {
 		RawUrl:    result.RawUrl,
 		HashUrl:   result.UrlHash,
 		CreatedAt: result.CreatedAt.Time,
+		UpdatedAt: updatedAt,
 		ExpiresAt: expiresAt,
 	}
 }
