@@ -11,6 +11,65 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createClickEvent = `-- name: CreateClickEvent :one
+INSERT INTO click_events (
+    link_id,
+    user_agent,
+    browser,
+    os,
+    device_type,
+    country,
+    ip_hash,
+    is_bot,
+    status_code
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
+)
+RETURNING id, link_id, clicked_at, user_agent, browser, os, device_type, country, ip_hash, is_bot, status_code
+`
+
+type CreateClickEventParams struct {
+	LinkID     int64
+	UserAgent  string
+	Browser    string
+	Os         string
+	DeviceType string
+	Country    string
+	IpHash     []byte
+	IsBot      bool
+	StatusCode int16
+}
+
+func (q *Queries) CreateClickEvent(ctx context.Context, arg CreateClickEventParams) (ClickEvent, error) {
+	row := q.db.QueryRow(ctx, createClickEvent,
+		arg.LinkID,
+		arg.UserAgent,
+		arg.Browser,
+		arg.Os,
+		arg.DeviceType,
+		arg.Country,
+		arg.IpHash,
+		arg.IsBot,
+		arg.StatusCode,
+	)
+	var i ClickEvent
+	err := row.Scan(
+		&i.ID,
+		&i.LinkID,
+		&i.ClickedAt,
+		&i.UserAgent,
+		&i.Browser,
+		&i.Os,
+		&i.DeviceType,
+		&i.Country,
+		&i.IpHash,
+		&i.IsBot,
+		&i.StatusCode,
+	)
+	return i, err
+}
+
 const expireLinks = `-- name: ExpireLinks :many
 UPDATE links
 SET status = 'expired'

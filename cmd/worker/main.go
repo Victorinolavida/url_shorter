@@ -76,7 +76,6 @@ func runWorker(ctx context.Context, duration time.Duration, service service.Link
 }
 
 func doWork(ctx context.Context, service service.LinkService) {
-	slog.Info("trying to expire links")
 	err := service.ExpireActiveLinks(ctx)
 	if err != nil {
 		slog.Error("error expiring links", slog.Any("error", err))

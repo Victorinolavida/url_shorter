@@ -46,3 +46,21 @@ RETURNING code;
 SELECT * from links 
 WHERE code = $1 and status = 'active'
   AND (expires_at IS NULL OR expires_at > now());
+
+
+-- name: CreateClickEvent :one
+INSERT INTO click_events (
+    link_id,
+    user_agent,
+    browser,
+    os,
+    device_type,
+    country,
+    ip_hash,
+    is_bot,
+    status_code
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
+)
+RETURNING *;

@@ -83,6 +83,7 @@ type Config struct {
 	LogLevel       string        `koanf:"log_level"`
 	WorkerInterval time.Duration `koanf:"worker_duration"`
 	Redis          Redis         `koanf:"redis"`
+	IPHashKey      string        `koanf:"ip_hash_key"`
 }
 
 func (c *Config) Validate() error {

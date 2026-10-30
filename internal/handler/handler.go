@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 
@@ -14,15 +15,22 @@ import (
 	"url_shorter/internal/service"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/mileusna/useragent"
 )
 
 type Handler struct {
-	service service.LinkService
-	domain  string
+	service  service.LinkService
+	domain   string
+	hops     int // trusted proxy hops, see clientIP
+	ipHasher *entity.IPHasher
 }
 
-func NewHandler(conf *config.Server, service service.LinkService) *Handler {
-	return &Handler{service: service, domain: conf.PublicDomain}
+func NewHandler(conf *config.Server, service service.LinkService, ipHasher *entity.IPHasher) *Handler {
+	hops := 0
+	if conf != nil {
+		// keep behavior but allow wiring via config if added later
+	}
+	return &Handler{service: service, domain: conf.PublicDomain, hops: hops, ipHasher: ipHasher}
 }
 
 func (h *Handler) HandleCreateCode(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +86,22 @@ func (h *Handler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	ua := useragent.Parse(r.UserAgent())
+
+	country := r.Header.Get("CloudFront-Viewer-Country")
+	event, err := entity.NewClickEvent(
+		link.ID, r.UserAgent(), ua.Name, ua.OS, ua.Device, country, clientIP(r, h.hops), ua.Bot, http.StatusSeeOther,
+		h.ipHasher,
+	)
+	if err != nil {
+		slog.Error("error creating event", slog.Any("error", err))
+	} else {
+		err = h.service.RecordLinkClickEvent(r.Context(), event)
+		if err != nil {
+			slog.Error("error saving event", slog.Any("error", err))
+		}
+	}
+
 	http.Redirect(w, r, link.RawUrl, http.StatusSeeOther)
 }
 
@@ -92,4 +116,22 @@ func (h *Handler) publicURL(code string) string {
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post("/url-shorten", h.HandleCreateCode)
 	r.Get("/{code}", h.HandleRedirect)
+}
+
+func clientIP(r *http.Request, hops int) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" && hops > 0 {
+		parts := strings.Split(xff, ",")
+		// each trusted proxy appends the address it saw,
+		// so the client is `hops` entries from the right
+		if idx := len(parts) - hops; idx >= 0 {
+			if ip := strings.TrimSpace(parts[idx]); net.ParseIP(ip) != nil {
+				return ip
+			}
+		}
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }

@@ -8,6 +8,7 @@ import (
 	"url_shorter/cache/redis"
 	"url_shorter/config"
 	"url_shorter/db/pool"
+	"url_shorter/internal/entity"
 	"url_shorter/internal/handler"
 	httpserver "url_shorter/internal/http_server"
 	"url_shorter/internal/repository"
@@ -35,7 +36,8 @@ func main() {
 
 	serv := service.NewLinkService(repo, cache)
 	server := httpserver.NewHttpServer(conf.Server)
-	handler.NewHandler(&conf.Server, serv).RegisterRoutes(server.Mux())
+	ipHasher := entity.NewIPHasher([]byte(conf.IPHashKey))
+	handler.NewHandler(&conf.Server, serv, ipHasher).RegisterRoutes(server.Mux())
 
 	if err := server.Start(); err != nil {
 		logger.Fatal("error starting http server", slog.Any("error", err))

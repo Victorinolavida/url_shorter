@@ -23,6 +23,41 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: click_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.click_events (
+    id bigint NOT NULL,
+    link_id bigint NOT NULL,
+    clicked_at timestamp with time zone DEFAULT now() NOT NULL,
+    user_agent text DEFAULT ''::text NOT NULL,
+    browser text DEFAULT ''::text NOT NULL,
+    os text DEFAULT ''::text NOT NULL,
+    device_type text DEFAULT ''::text NOT NULL,
+    country text DEFAULT ''::text NOT NULL,
+    ip_hash bytea,
+    is_bot boolean DEFAULT false NOT NULL,
+    status_code smallint NOT NULL,
+    CONSTRAINT chck_click_events_status_code CHECK ((status_code = ANY (ARRAY[301, 303, 302, 410]))),
+    CONSTRAINT chck_click_events_user_agent_length CHECK ((char_length(user_agent) <= 512))
+);
+
+
+--
+-- Name: click_events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.click_events ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.click_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: links; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -52,6 +87,14 @@ ALTER TABLE public.links ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: click_events pk_click_events; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.click_events
+    ADD CONSTRAINT pk_click_events PRIMARY KEY (id);
 
 
 --

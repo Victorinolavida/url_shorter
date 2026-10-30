@@ -51,6 +51,7 @@ func (repo *LinkRepo) Save(ctx context.Context, link *entity.Link) (*entity.Link
 	if err != nil {
 		return nil, err
 	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
@@ -126,4 +127,24 @@ func linkFromRow(result sqlc.Link) *entity.Link {
 
 func (repo *LinkRepo) ExpireLinks(ctx context.Context) ([]string, error) {
 	return repo.queries.ExpireLinks(ctx)
+}
+
+func (repo *LinkRepo) SaveClickEvent(ctx context.Context, event *entity.ClickEvent) error {
+	result, err := repo.queries.CreateClickEvent(ctx, sqlc.CreateClickEventParams{
+		UserAgent:  event.UserAgent,
+		Browser:    event.Browser,
+		Os:         event.Os,
+		StatusCode: int16(event.StatusCode),
+		DeviceType: event.DeviceType,
+		Country:    event.Country,
+		IpHash:     event.IPHash,
+		IsBot:      event.IsBot,
+		LinkID:     int64(event.LinkID),
+	})
+	if err != nil {
+		return err
+	}
+	event.ID = int(result.ID)
+	event.ClickedAt = result.ClickedAt.Time
+	return nil
 }

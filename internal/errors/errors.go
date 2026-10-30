@@ -15,4 +15,7 @@ var (
 	ErrNoPortFound       = errors.New("no port info found")
 	ErrUrlEmpty          = errors.New("url must be not empty")
 	ErrInvalidExpiration = errors.New("invalid expiration time")
+	ErrInvalidLinkID     = errors.New("invalid link id")
+	ErrUserAgentTooLong  = errors.New("user agent is too long")
+	ErrInvalidStatusCode = errors.New("invalid status code")
 )

@@ -78,3 +78,7 @@ func (s *LinkServ) GetActiveLinkByCode(ctx context.Context, code string) (*entit
 	}
 	return link, nil
 }
+
+func (s *LinkServ) RecordLinkClickEvent(ctx context.Context, event *entity.ClickEvent) error {
+	return s.repo.SaveClickEvent(ctx, event)
+}

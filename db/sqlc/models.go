@@ -8,6 +8,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ClickEvent struct {
+	ID         int64
+	LinkID     int64
+	ClickedAt  pgtype.Timestamptz
+	UserAgent  string
+	Browser    string
+	Os         string
+	DeviceType string
+	Country    string
+	IpHash     []byte
+	IsBot      bool
+	StatusCode int16
+}
+
 type Link struct {
 	ID        int64
 	Code      string
